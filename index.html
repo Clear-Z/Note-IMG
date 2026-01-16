@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note-IMG DIY</title>
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .chinese-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+        .chinese-sans {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #1e293b;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        .export-card {
+            box-shadow: 0 20px 50px rgba(0,0,0,0.04);
+        }
+        /* Marker Effect styling */
+        [contenteditable] span[style*="background-color"] {
+            padding: 0 1px;
+            border-radius: 1px;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
+
+    <div id="app">
+        <!-- Header -->
+        <header class="bg-white/95 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-800 text-white p-2.5 rounded-2xl shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-tighter text-slate-900 leading-none">Note-IMG <span class="text-slate-400 font-normal italic">PRO</span></h1>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Single-Block Layout Engine</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button id="toggleEditBtn" class="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm">
+                    <span id="toggleIcon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
+                    <span id="toggleText">编辑模式</span>
+                </button>
+                <button id="exportBtn" class="px-6 py-2.5 rounded-full bg-slate-900 text-white text-sm font-bold shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span>导出全集</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-4 md:p-10 grid grid-cols-1 md:grid-cols-12 gap-10">
+            <!-- Sidebar / Settings -->
+            <section id="sidebar" class="md:col-span-5 space-y-6">
+                <div class="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100 space-y-6">
+                    <div>
+                        <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            文本编辑
+                        </h2>
+                        <textarea id="inputText" class="w-full h-80 p-6 border-2 border-slate-50 rounded-2xl focus:border-slate-200 outline-none resize-none text-base leading-relaxed chinese-serif text-slate-700 bg-slate-50/50" placeholder="在此输入文字..."></textarea>
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-50 space-y-6">
+                        <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/><line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/><line x1="14" y1="2" x2="14" y2="6"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="16" y1="18" x2="16" y2="22"/></svg>
+                            排版实验室
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 gap-6">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">字号 <span id="fontSizeVal">18</span>px</label>
+                                <input type="range" id="fontSize" min="12" max="32" class="w-full accent-slate-800 h-1" value="18">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">行高 <span id="lineHeightVal">1.6</span>x</label>
+                                <input type="range" id="lineHeight" min="1.0" max="3.0" step="0.1" class="w-full accent-slate-800 h-1" value="1.6">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">字距 <span id="letterSpacingVal">0.5</span>px</label>
+                                <input type="range" id="letterSpacing" min="-1" max="8" step="0.5" class="w-full accent-slate-800 h-1" value="0.5">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">段距 <span id="paraSpacingVal">16</span>px</label>
+                                <input type="range" id="paraSpacing" min="0" max="80" step="2" class="w-full accent-slate-800 h-1" value="16">
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block">文字对齐</label>
+                            <div class="flex gap-2">
+                                <button data-align="left" class="alignBtn flex-1 py-3 rounded-xl border-2 flex justify-center border-slate-800 bg-slate-50 text-slate-800 transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+                                </button>
+                                <button data-align="center" class="alignBtn flex-1 py-3 rounded-xl border-2 flex justify-center border-slate-50 text-slate-400 transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+                                </button>
+                                <button data-align="right" class="alignBtn flex-1 py-3 rounded-xl border-2 flex justify-center border-slate-50 text-slate-400 transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block">纸张底色</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button data-color="#F9F4E8" data-theme="beige" class="themeBtn h-10 rounded-xl border-2 border-slate-800 scale-105" style="background-color: #F9F4E8"></button>
+                                <button data-color="#FFFFFF" data-theme="white" class="themeBtn h-10 rounded-xl border-2 border-slate-50" style="background-color: #FFFFFF"></button>
+                                <button data-color="#F3F4F6" data-theme="grey" class="themeBtn h-10 rounded-xl border-2 border-slate-50" style="background-color: #F3F4F6"></button>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">自定义标识符 (页脚重点)</label>
+                            <input type="text" id="watermarkInput" class="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-700 font-medium outline-none chinese-sans focus:border-slate-300 transition-all" value="Curated thoughts for the modern era.">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Preview Canvas -->
+            <section id="canvasSection" class="md:col-span-7 space-y-12 pb-20">
+                <!-- Floating Toolbar -->
+                <div class="flex items-center justify-between bg-white p-3 rounded-3xl border border-slate-100 shadow-sm sticky top-24 z-40 overflow-x-auto">
+                    <div class="flex gap-1 items-center px-1">
+                        <button onclick="document.execCommand('bold', false, null)" class="p-2.5 hover:bg-slate-50 rounded-xl text-slate-700 transition-colors" title="加粗">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+                        </button>
+                        <div class="w-px h-6 bg-slate-100 mx-1.5"></div>
+                        <button onclick="document.execCommand('backColor', false, '#fef08a')" class="w-6 h-6 rounded-full bg-[#fef08a] border border-slate-200 hover:scale-110 transition-transform" title="柠檬黄"></button>
+                        <button onclick="document.execCommand('backColor', false, '#fbcfe8')" class="w-6 h-6 rounded-full bg-[#fbcfe8] border border-slate-200 hover:scale-110 transition-transform" title="落樱粉"></button>
+                        <button onclick="document.execCommand('backColor', false, '#bbf7d0')" class="w-6 h-6 rounded-full bg-[#bbf7d0] border border-slate-200 hover:scale-110 transition-transform" title="浅草绿"></button>
+                        <button onclick="document.execCommand('backColor', false, '#bae6fd')" class="w-6 h-6 rounded-full bg-[#bae6fd] border border-slate-200 hover:scale-110 transition-transform" title="天空蓝"></button>
+                        <div class="w-px h-6 bg-slate-100 mx-1.5"></div>
+                        <button onclick="document.execCommand('justifyLeft', false, null)" class="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+                        </button>
+                        <button onclick="document.execCommand('justifyCenter', false, null)" class="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+                        </button>
+                        <button onclick="document.execCommand('justifyRight', false, null)" class="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+                        </button>
+                        <div class="w-px h-6 bg-slate-100 mx-1.5"></div>
+                        <button onclick="document.execCommand('removeFormat', false, null)" class="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 group transition-all" title="擦除所有格式">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="m22 21H7"/><path d="m5 11 9 9"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards Render Area -->
+                <div id="cardsContainer" class="flex flex-col items-center gap-20">
+                    <!-- Cards will be injected by JS -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Hidden Node for measurement -->
+        <div id="measurementNode" class="chinese-serif absolute top-[-9999px] invisible whitespace-pre-wrap break-words"></div>
+
+        <!-- Export UI -->
+        <div id="exportOverlay" class="hidden fixed inset-0 bg-slate-900/98 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center text-white text-center p-12">
+            <div class="relative mb-10">
+                <div class="animate-ping absolute inset-0 rounded-full bg-white/20"></div>
+                <div class="animate-spin rounded-full h-20 w-20 border-[2px] border-white/30 border-t-white relative z-10"></div>
+            </div>
+            <h3 class="text-2xl font-semibold mb-3 tracking-tight chinese-sans">正在渲染高清作品</h3>
+            <p class="text-slate-400 text-sm font-light max-w-xs leading-relaxed">正在将您的灵感固化为精致卡片...</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Core State ---
+        const INITIAL_TEXT = `在这个信息爆炸的时代，如何让你的文字在社交媒体上脱颖而出？\n\n长文往往让人望而生畏，而精美的图片卡片则是解决阅读压力的最佳方案。这就是“Note-IMG”诞生的初衷：将你的思想碎片，转化为视觉上的享受。\n\n我们采用了“段落块”分页引擎，文字绝对不会在句子中间被切断。点击下方的推拉按钮，即可在页面间自由穿梭段落。\n\n卡片支持自动垂直伸长。如果内容拉入过多，卡片会自适应调整，确保所有文字均有舒适的生存空间。\n\n我们根据苹果设计规范深度重构了页脚层级，优先突出您的自定义信息，并将品牌标识与页码收敛于极简的注脚空间。\n\n自由调节字号、行距、字间距与段落间距。愿您的每一段思想，都能找到最美的容器。`;
+
+        let settings = {
+            fontSize: 18,
+            lineHeight: 1.6,
+            letterSpacing: 0.5,
+            paragraphSpacing: 16,
+            bgColor: '#F9F4E8',
+            theme: 'beige',
+            textAlign: 'left',
+            watermark: 'Note-IMG DIY Creation',
+            cardWidth: 360,
+            standardHeight: 480
+        };
+
+        let pages = []; 
+        let isEditing = true;
+
+        const inputTextEl = document.getElementById('inputText');
+        const cardsContainer = document.getElementById('cardsContainer');
+        const measurementNode = document.getElementById('measurementNode');
+        const exportOverlay = document.getElementById('exportOverlay');
+        const toggleEditBtn = document.getElementById('toggleEditBtn');
+        const watermarkInput = document.getElementById('watermarkInput');
+        const sidebar = document.getElementById('sidebar');
+
+        function paginate() {
+            const text = inputTextEl.value;
+            const rawParagraphs = text.split('\n').filter(p => p.trim().length > 0);
+            const processedChunks = [];
+
+            rawParagraphs.forEach(p => {
+                if (p.length > 500) {
+                    const sentences = p.split(/([。！？；]|\. |\! |\? )/g);
+                    let temp = "";
+                    for (let i = 0; i < sentences.length; i++) {
+                        temp += sentences[i];
+                        if (i % 2 !== 0 || i === sentences.length - 1) {
+                            processedChunks.push(temp);
+                            temp = "";
+                        }
+                    }
+                } else {
+                    processedChunks.push(p);
+                }
+            });
+
+            measurementNode.style.fontSize = `${settings.fontSize}px`;
+            measurementNode.style.lineHeight = settings.lineHeight;
+            measurementNode.style.letterSpacing = `${settings.letterSpacing}px`;
+            measurementNode.style.width = `${settings.cardWidth - 80}px`;
+
+            const newPages = [[]];
+            let currentPageIdx = 0;
+            const effectiveMaxHeight = settings.standardHeight - 80; // Optimized space further
+
+            processedChunks.forEach(chunk => {
+                const currentPageContent = newPages[currentPageIdx];
+                const testContent = [...currentPageContent, chunk];
+                measurementNode.innerHTML = testContent.map(c => 
+                    `<div style="margin-bottom: ${settings.paragraphSpacing}px">${c}</div>`
+                ).join('');
+
+                if (measurementNode.offsetHeight > effectiveMaxHeight && currentPageContent.length > 0) {
+                    currentPageIdx++;
+                    newPages[currentPageIdx] = [chunk];
+                } else {
+                    newPages[currentPageIdx].push(chunk);
+                }
+            });
+
+            pages = newPages;
+            render();
+        }
+
+        function handlePush(idx) {
+            if (idx >= pages.length - 1 && pages[idx].length <= 1) return;
+            const block = pages[idx].pop();
+            if (block) {
+                if (!pages[idx + 1]) pages[idx+1] = [];
+                pages[idx + 1].unshift(block);
+                if (pages[idx].length === 0) pages.splice(idx, 1);
+                render();
+            }
+        }
+
+        function handlePull(idx) {
+            if (idx >= pages.length - 1) return;
+            const block = pages[idx+1].shift();
+            if (block) {
+                pages[idx].push(block);
+                if (pages[idx + 1].length === 0) pages.splice(idx+1, 1);
+                render();
+            }
+        }
+
+        function render() {
+            cardsContainer.innerHTML = '';
+
+            pages.forEach((paragraphs, idx) => {
+                const cardWrapper = document.createElement('div');
+                cardWrapper.className = 'relative group w-full max-w-[360px]';
+
+                const card = document.createElement('div');
+                card.className = 'export-card rounded-sm flex flex-col transition-all overflow-hidden';
+                card.style.backgroundColor = settings.bgColor;
+                card.style.width = `${settings.cardWidth}px`;
+                card.style.minHeight = `${settings.standardHeight}px`;
+                card.style.height = 'auto';
+                card.style.padding = '55px 40px 32px 40px'; 
+
+                const content = document.createElement('div');
+                content.className = 'chinese-serif flex-1 outline-none';
+                content.contentEditable = true;
+                content.style.fontSize = `${settings.fontSize}px`;
+                content.style.lineHeight = settings.lineHeight;
+                content.style.letterSpacing = `${settings.letterSpacing}px`;
+                content.style.textAlign = settings.textAlign;
+                content.style.color = '#1a1a1a';
+
+                paragraphs.forEach(p => {
+                    const pDiv = document.createElement('div');
+                    pDiv.style.marginBottom = `${settings.paragraphSpacing}px`;
+                    pDiv.innerText = p;
+                    content.appendChild(pDiv);
+                });
+
+                // Footer - Apple Designer Refinement
+                // Hierarchical structure: User Watermark (Top), Brand + Page (Bottom)
+                const footer = document.createElement('div');
+                footer.className = 'mt-10 pt-4 flex flex-col gap-3 relative';
+                
+                // Fine divider - subtle hairline
+                const divider = document.createElement('div');
+                divider.className = 'absolute top-0 left-0 right-0 h-[0.5px] bg-black/[0.04]';
+                footer.appendChild(divider);
+
+                footer.innerHTML += `
+                    <!-- Level 1: Primary focus (User editable watermark) -->
+                    <div class="chinese-sans text-[11px] text-slate-800 font-medium tracking-tight leading-snug">
+                        ${settings.watermark}
+                    </div>
+                    <!-- Level 2: Metadata (Tool ID and Page number) -->
+                    <div class="flex justify-between items-end">
+                        <span class="text-[8.5px] font-medium text-slate-300 tracking-[0.35em] uppercase chinese-sans leading-none">Note-IMG</span>
+                        <span class="text-[13px] font-bold text-slate-900 tracking-[-0.01em] chinese-sans leading-none">${String(idx + 1).padStart(2, '0')}</span>
+                    </div>
+                `;
+
+                card.appendChild(content);
+                card.appendChild(footer);
+                cardWrapper.appendChild(card);
+
+                // Adjuster UI
+                if (pages.length > 1) {
+                    const adjusters = document.createElement('div');
+                    adjusters.className = 'absolute -bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 z-20 opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100';
+                    
+                    const pushBtn = document.createElement('button');
+                    pushBtn.className = 'bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-2.5 rounded-full text-slate-400 hover:text-slate-900 transition-all active:scale-90';
+                    pushBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+                    pushBtn.onclick = () => handlePush(idx);
+
+                    const pullBtn = document.createElement('button');
+                    pullBtn.className = 'bg-white/80 backdrop-blur shadow-xl border border-slate-100 p-2.5 rounded-full text-slate-400 hover:text-slate-900 transition-all active:scale-90';
+                    pullBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+                    pullBtn.onclick = () => handlePull(idx);
+
+                    adjusters.appendChild(pushBtn);
+                    const gap = document.createElement('div');
+                    gap.className = 'h-px w-6 bg-slate-200/50';
+                    adjusters.appendChild(gap);
+                    adjusters.appendChild(pullBtn);
+                    cardWrapper.appendChild(adjusters);
+                }
+
+                cardsContainer.appendChild(cardWrapper);
+            });
+        }
+
+        async function exportImages() {
+            exportOverlay.classList.remove('hidden');
+            const cards = document.querySelectorAll('.export-card');
+            try {
+                for (let i = 0; i < cards.length; i++) {
+                    const canvas = await html2canvas(cards[i], {
+                        scale: 3,
+                        useCORS: true,
+                        backgroundColor: settings.bgColor,
+                    });
+                    const link = document.createElement('a');
+                    link.download = `NoteIMG_Creation_${i + 1}.png`;
+                    link.href = canvas.toDataURL('image/png', 1.0);
+                    link.click();
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                exportOverlay.classList.add('hidden');
+            }
+        }
+
+        // Init & Control Bindings
+        inputTextEl.oninput = paginate;
+        watermarkInput.oninput = (e) => {
+            settings.watermark = e.target.value;
+            render();
+        };
+
+        document.getElementById('fontSize').oninput = (e) => {
+            settings.fontSize = parseInt(e.target.value);
+            document.getElementById('fontSizeVal').innerText = settings.fontSize;
+            paginate();
+        };
+        document.getElementById('lineHeight').oninput = (e) => {
+            settings.lineHeight = parseFloat(e.target.value);
+            document.getElementById('lineHeightVal').innerText = settings.lineHeight;
+            paginate();
+        };
+        document.getElementById('letterSpacing').oninput = (e) => {
+            settings.letterSpacing = parseFloat(e.target.value);
+            document.getElementById('letterSpacingVal').innerText = settings.letterSpacing;
+            paginate();
+        };
+        document.getElementById('paraSpacing').oninput = (e) => {
+            settings.paragraphSpacing = parseInt(e.target.value);
+            document.getElementById('paraSpacingVal').innerText = settings.paragraphSpacing;
+            paginate();
+        };
+
+        document.querySelectorAll('.alignBtn').forEach(btn => {
+            btn.onclick = () => {
+                settings.textAlign = btn.dataset.align;
+                document.querySelectorAll('.alignBtn').forEach(b => {
+                    b.classList.remove('border-slate-800', 'bg-slate-50', 'text-slate-800');
+                    b.classList.add('border-slate-50', 'text-slate-400');
+                });
+                btn.classList.add('border-slate-800', 'bg-slate-50', 'text-slate-800');
+                btn.classList.remove('border-slate-50', 'text-slate-400');
+                render();
+            };
+        });
+
+        document.querySelectorAll('.themeBtn').forEach(btn => {
+            btn.onclick = () => {
+                settings.bgColor = btn.dataset.color;
+                settings.theme = btn.dataset.theme;
+                document.querySelectorAll('.themeBtn').forEach(b => {
+                    b.classList.remove('border-slate-800', 'scale-105');
+                    b.classList.add('border-slate-50');
+                });
+                btn.classList.add('border-slate-800', 'scale-105');
+                btn.classList.remove('border-slate-50');
+                render();
+            };
+        });
+
+        toggleEditBtn.onclick = () => {
+            isEditing = !isEditing;
+            const toggleIcon = document.getElementById('toggleIcon');
+            const toggleText = document.getElementById('toggleText');
+            
+            if (isEditing) {
+                sidebar.classList.remove('hidden');
+                toggleText.innerText = '完成设定';
+                toggleEditBtn.classList.remove('bg-white', 'text-slate-600');
+                toggleEditBtn.classList.add('bg-slate-100', 'text-slate-900');
+            } else {
+                sidebar.classList.add('hidden');
+                toggleText.innerText = '修改样式';
+                toggleEditBtn.classList.add('bg-white', 'text-slate-600');
+                toggleEditBtn.classList.remove('bg-slate-100', 'text-slate-900');
+            }
+        };
+
+        document.getElementById('exportBtn').onclick = exportImages;
+
+        // Start
+        inputTextEl.value = INITIAL_TEXT;
+        paginate();
+    </script>
+</body>
+</html>
